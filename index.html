@@ -59,7 +59,7 @@ h1.title { margin: 0; font-size: 28px; line-height: 34px; font-weight: 700; }
 <li><a class="flow" href="#b-push" data-flow="b"><span class="flow-name">B · With More view updated</span><span class="flow-desc">Push → payment sheet → View payment history → Payments. The More view shows the plan card with “All paid”.</span><span class="flow-go">Start</span></a></li>
 <li><a class="flow" href="#c-push" data-flow="c"><span class="flow-name">C · With Message Center</span><span class="flow-desc">Push → payment sheet, saved to Messages → More → Messages → payment message.</span><span class="flow-go">Start</span></a></li>
 </ul>
-<p class="tips"><strong>Back to this screen:</strong> press and hold the top-left corner of the screen for one second.<br><strong>Full screen:</strong> open this page in Safari or Chrome and add it to your home screen.</p>
+<p class="tips"><strong>Back to this screen:</strong> press and hold with two fingers anywhere on the screen for one second (holding the top-left corner with one finger also works). Opening the app from the home screen always starts here.<br><strong>Full screen:</strong> open this page in Safari or Chrome and add it to your home screen.</p>
 </div>
 </main>
 <div id="stage" hidden></div>
@@ -585,8 +585,40 @@ h1.title { margin: 0; font-size: 28px; line-height: 34px; font-weight: 700; }
   }
 
   var holdTimer = null;
-  function startHold(e) { e.preventDefault(); clearTimeout(holdTimer); holdTimer = setTimeout(function () { location.hash = ''; showPicker(); }, 1000); }
+  function toPicker() {
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (err) { location.hash = ''; }
+    showPicker();
+  }
+  function startHold(e) { e.preventDefault(); clearTimeout(holdTimer); holdTimer = setTimeout(toPicker, 1000); }
   function endHold() { clearTimeout(holdTimer); }
+
+  // Two-finger long press anywhere: back to the flow picker.
+  var twoStart = null;
+  function mid(t) { return { x: (t[0].clientX + t[1].clientX) / 2, y: (t[0].clientY + t[1].clientY) / 2 }; }
+  document.addEventListener('touchstart', function (e) {
+    if (stage.hidden) return;
+    if (e.touches.length >= 2) {
+      e.preventDefault();
+      twoStart = mid(e.touches);
+      clearTimeout(holdTimer);
+      holdTimer = setTimeout(function () { twoStart = null; toPicker(); }, 1000);
+    }
+  }, { passive: false });
+  document.addEventListener('touchmove', function (e) {
+    if (!twoStart) return;
+    if (e.touches.length < 2) { twoStart = null; endHold(); return; }
+    e.preventDefault();
+    var m = mid(e.touches);
+    if (Math.abs(m.x - twoStart.x) > 30 || Math.abs(m.y - twoStart.y) > 30) { twoStart = null; endHold(); }
+  }, { passive: false });
+  function twoEnd(e) { if (twoStart && e.touches.length < 2) { twoStart = null; endHold(); } }
+  document.addEventListener('touchend', twoEnd);
+  document.addEventListener('touchcancel', twoEnd);
+  document.addEventListener('gesturestart', function (e) { if (!stage.hidden) e.preventDefault(); });
+
+  // Launched from the home screen: always start on the flow picker, not where the last session ended.
+  var standalone = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+  if (standalone && location.hash) { try { history.replaceState(null, '', location.pathname + location.search); } catch (err) {} }
   reset.addEventListener('pointerdown', startHold);
   ['pointerup', 'pointerleave', 'pointercancel'].forEach(function (ev) { reset.addEventListener(ev, endHold); });
   reset.addEventListener('contextmenu', function (e) { e.preventDefault(); });
