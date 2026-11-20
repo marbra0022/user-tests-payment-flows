@@ -21,9 +21,9 @@
   :root:not([data-theme="light"]) { --bg: #222A2F; --surface: #3D4448; --text: #EAF1F6; --muted: #C9D6DF; --primary: #2D7B44; --on-primary: #F8FCFF; --line: #4E565A; }
 }
 :root[data-theme="dark"] { --bg: #222A2F; --surface: #3D4448; --text: #EAF1F6; --muted: #C9D6DF; --primary: #2D7B44; --on-primary: #F8FCFF; --line: #4E565A; }
-html, body { height: 100%; margin: 0; }
+html, body { height: 100%; min-height: 100vh; min-height: 100lvh; margin: 0; background: #FFFFFF; }
 body { background: #111518; font-family: Roboto, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif; -webkit-tap-highlight-color: transparent; overscroll-behavior: none; }
-#stage { position: fixed; inset: 0; overflow: hidden; background: #FFFFFF; color-scheme: light; touch-action: manipulation; }
+#stage { position: fixed; top: 0; left: 0; right: 0; height: 100vh; height: 100lvh; overflow: hidden; background: #FFFFFF; color-scheme: light; touch-action: manipulation; }
 #stage > .screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; animation: fadein 140ms ease-out; }
 #stage a { -webkit-touch-callout: none; }
 #stage *:focus-visible { outline: 2px solid #18AA55; outline-offset: 2px; }
@@ -554,6 +554,14 @@ h1.title { margin: 0; font-size: 28px; line-height: 34px; font-weight: 700; }
   // Screens are designed at 390 x 844. Scale them so the whole screen always fits the viewport,
   // and let the fluid layout fill the leftover space instead of letterboxing.
   function fit() {
+    // Home-screen (standalone) mode on iPhone can report a viewport shorter than the screen,
+    // leaving an empty band at the bottom. Stretch the stage to the full screen height there.
+    var isApp = window.navigator.standalone === true || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches);
+    if (isApp && window.screen) {
+      var portrait = window.innerHeight >= window.innerWidth;
+      var full = portrait ? Math.max(screen.width, screen.height) : Math.min(screen.width, screen.height);
+      stage.style.height = Math.max(full, window.innerHeight) + 'px';
+    }
     var el = stage.firstElementChild; if (!el) return;
     var vw = stage.clientWidth, vh = stage.clientHeight;
     if (!vw || !vh) return;
